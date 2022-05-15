@@ -11,7 +11,9 @@ from .models import Profile, Post
 
 @login_required(login_url='signin')
 def index(request):
-    return render(request=request, template_name='index.html')
+    user_profile = Profile.objects.get(user=request.user)
+    posts = Post.objects.all()
+    return render(request, 'index.html', {"user_profile": user_profile, "posts": posts})
 
 def signIn(request):
     if request.method == "POST":
