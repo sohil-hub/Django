@@ -4,7 +4,7 @@ from django.http import request, HttpResponse
 from django.contrib.auth.models import User, auth
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
-from .models import Profile, Post, LikePost
+from .models import Profile, Post, LikePost, FollowCount
 
 
 
@@ -98,6 +98,20 @@ def setting(request):
     return render(request, 'setting.html', {'user_profile': user_profile})
 
 @login_required(login_url='signin')
+def follow(request):
+    if request.method == 'POST':
+        follower = request.user.username
+        user = request.POST['user_object']
+
+        if FollowCount.objects.filter(follower=follower, user=user).first():
+            FollowCount.objects.filter(follower=follower, user=user).delete()
+            return redirect('profile/'+user)
+        
+        new_follower = FollowCount.objects.create(follower=follower, user=user)
+        new_follower.save()
+        return redirect('profile/'+user)
+
+@login_required(login_url='signin')
 def like_post(request):
     username = request.user.username
     post_id = request.GET.get('post_id')
@@ -122,10 +136,22 @@ def profile(request, pk):
     user_profile = Profile.objects.get(user=user_object)
     user_posts = Post.objects.filter(user=pk)
     user_post_length = len(user_posts)
+    
+    follower = request.user.username
+    # user     = pk
+    if FollowCount.objects.filter(follower=follower, user=pk).first():
+        button_text = "Unfollow"
+    else:
+        button_text = "Follow"
+    user_followers = len(FollowCount.objects.filter(user=pk))
+    user_following = len(FollowCount.objects.filter(follower=pk))
     context = {
         'user_object'     : user_object,
         'user_profile'    : user_profile,
         'user_posts'      : user_posts,
-        'user_post_length': user_post_length
+        'user_post_length': user_post_length,
+        'button_text'     : button_text,
+        'user_followers'  : user_followers,
+        'user_following'  : user_following,
     }
     return render(request, 'profile.html', context)
